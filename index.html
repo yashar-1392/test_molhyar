@@ -2,85 +2,145 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ورود به مخیار</title>
+
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       min-height: 100vh;
-      display: grid;
-      place-items: center;
-      background: #f4f6fb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #10131c;
+      color: white;
       font-family: Tahoma, sans-serif;
+      padding: 20px;
     }
-    .card {
-      width: min(360px, calc(100% - 40px));
-      padding: 32px 24px;
-      background: white;
-      border-radius: 18px;
-      box-shadow: 0 8px 35px #00000012;
+
+    .login-box {
+      width: 100%;
+      max-width: 400px;
+      padding: 30px;
+      border: 1px solid #303747;
+      border-radius: 20px;
+      background: #191e2b;
       text-align: center;
     }
+
+    h1 {
+      margin-top: 0;
+      color: #8bb8ff;
+    }
+
+    p {
+      color: #aab3c5;
+      line-height: 1.8;
+    }
+
     button {
       width: 100%;
-      padding: 13px;
-      margin-top: 14px;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      background: white;
-      font-size: 15px;
+      padding: 14px;
+      margin-top: 12px;
+      border: none;
+      border-radius: 12px;
       cursor: pointer;
+      font-size: 15px;
+      font-weight: bold;
     }
-    button:disabled { opacity: .5; cursor: wait; }
-    #userInfo { display: none; }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #loginBtn {
+      background: #4285f4;
+      color: white;
+    }
+
+    #logoutBtn {
+      background: #343c4d;
+      color: white;
+      display: none;
+    }
+
     #status {
-      margin-top: 18px;
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 10px;
+      background: #222a3a;
       font-size: 13px;
       line-height: 1.8;
-      color: #555;
       overflow-wrap: anywhere;
     }
-    #userPhoto {
-      width: 76px;
-      height: 76px;
-      border-radius: 50%;
-      object-fit: cover;
+
+    #userInfo {
+      display: none;
+      margin-top: 20px;
+      padding: 15px;
+      background: #222a3a;
+      border-radius: 12px;
+      text-align: right;
+      line-height: 2;
     }
   </style>
 </head>
+
 <body>
 
-  <main class="card">
-    <h2>ورود به مخیار 🤖</h2>
-    <p>برای استفاده از حساب کاربری خود وارد شوید.</p>
+  <main class="login-box">
+    <h1>🤖 مخیار</h1>
+    <p>برای ورود یا ساخت حساب کاربری، از حساب گوگل خود استفاده کن.</p>
 
-    <button id="loginBtn">🌐 ورود با حساب گوگل</button>
+    <button id="loginBtn">
+      ورود با گوگل
+    </button>
 
-    <section id="userInfo">
-      <img id="userPhoto" alt="تصویر پروفایل">
-      <h3 id="userName"></h3>
-      <p id="userEmail"></p>
-      <button id="logoutBtn">خروج از حساب</button>
-    </section>
+    <button id="logoutBtn">
+      خروج از حساب
+    </button>
 
-    <div id="status">آماده ورود</div>
+    <div id="status">در حال آماده‌سازی...</div>
+
+    <div id="userInfo">
+      <strong>اطلاعات حساب</strong>
+      <div id="userName"></div>
+      <div id="userEmail"></div>
+      <div id="backendStatus"></div>
+    </div>
   </main>
 
   <script type="module">
-    import { initializeApp } from
-      "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+
+    // ==========================================
+    // 1. وارد کردن Firebase
+    // ==========================================
+
+    import {
+      initializeApp
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 
     import {
       getAuth,
       GoogleAuthProvider,
-      signInWithPopup,
+      signInWithRedirect,
+      getRedirectResult,
       signOut,
       onAuthStateChanged,
       setPersistence,
       browserLocalPersistence
-    } from
-      "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+
+    // ==========================================
+    // 2. تنظیمات Firebase مخیار
+    // ==========================================
 
     const firebaseConfig = {
       apiKey: "AIzaSyD_b3We39OOnxGa-Jw1KAtZS7Q7jT7-ClU",
@@ -92,102 +152,238 @@
       measurementId: "G-Q94PN0CMT8"
     };
 
-    const WORKER_URL =
+
+    // ==========================================
+    // 3. آدرس بک‌اند Cloudflare مخیار
+    // ==========================================
+
+    const BACKEND_URL =
       "https://mokhyar-backend.yashar-online-store.workers.dev";
+
+
+    // ==========================================
+    // 4. راه‌اندازی Firebase
+    // ==========================================
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-
     const provider = new GoogleAuthProvider();
-    provider.addScope("email");
+
     provider.setCustomParameters({
       prompt: "select_account"
     });
 
+
+    // ==========================================
+    // 5. عناصر صفحه
+    // ==========================================
+
     const loginBtn = document.getElementById("loginBtn");
     const logoutBtn = document.getElementById("logoutBtn");
-    const userInfo = document.getElementById("userInfo");
     const statusBox = document.getElementById("status");
+    const userInfo = document.getElementById("userInfo");
+
+    const userName = document.getElementById("userName");
+    const userEmail = document.getElementById("userEmail");
+    const backendStatus = document.getElementById("backendStatus");
+
 
     function setStatus(message) {
       statusBox.textContent = message;
     }
 
-    async function connectToBackend(user) {
-      setStatus("در حال اتصال حساب به بک‌اند مخیار...");
 
-      const idToken = await user.getIdToken();
-
-      const response = await fetch(`${WORKER_URL}/auth/google`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${idToken}`,
-          "Content-Type": "application/json"
-        }
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "اتصال به بک‌اند ناموفق بود.");
-      }
-
-      setStatus("ورود موفق بود و حساب به بک‌اند مخیار متصل شد.");
-      return data;
-    }
+    // ==========================================
+    // 6. ورود با Google Redirect
+    // ==========================================
 
     loginBtn.addEventListener("click", async () => {
-      loginBtn.disabled = true;
-      setStatus("در حال باز کردن ورود گوگل...");
-
       try {
-        const result = await signInWithPopup(auth, provider);
-        await connectToBackend(result.user);
+        loginBtn.disabled = true;
+
+        setStatus("در حال انتقال به صفحه ورود گوگل...");
+
+        await setPersistence(auth, browserLocalPersistence);
+
+        await signInWithRedirect(auth, provider);
+
       } catch (error) {
-        console.error(error);
-        setStatus("خطا: " + (error.message || "ورود ناموفق بود."));
-      } finally {
+        console.error("Login error:", error);
+
         loginBtn.disabled = false;
+
+        setStatus("خطا در شروع ورود: " + error.message);
       }
     });
 
-    logoutBtn.addEventListener("click", async () => {
-      try {
-        await signOut(auth);
-        setStatus("از حساب خارج شدید.");
-      } catch (error) {
-        setStatus("خطا در خروج: " + error.message);
-      }
-    });
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        loginBtn.style.display = "block";
-        userInfo.style.display = "none";
+    // ==========================================
+    // 7. اتصال کاربر به بک‌اند مخیار
+    // ==========================================
+
+    let connectedUid = null;
+    let connectingUid = null;
+
+    async function connectToBackend(user) {
+
+      if (!user) return;
+
+      // جلوگیری از ارسال درخواست تکراری
+      if (connectedUid === user.uid || connectingUid === user.uid) {
         return;
       }
 
-      loginBtn.style.display = "none";
-      userInfo.style.display = "block";
+      connectingUid = user.uid;
 
-      document.getElementById("userName").textContent =
-        user.displayName || "کاربر مخیار";
-
-      document.getElementById("userEmail").textContent =
-        user.email || "";
-
-      document.getElementById("userPhoto").src =
-        user.photoURL || "";
+      backendStatus.textContent = "در حال اتصال به بک‌اند...";
 
       try {
-        await connectToBackend(user);
+
+        // دریافت Firebase ID Token
+        const idToken = await user.getIdToken();
+
+        // ارسال توکن به Cloudflare Worker
+        const response = await fetch(
+          `${BACKEND_URL}/auth/google`,
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${idToken}`,
+              "Content-Type": "application/json"
+            }
+          }
+        );
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(
+            data.error ||
+            data.message ||
+            `خطای سرور: ${response.status}`
+          );
+        }
+
+        connectedUid = user.uid;
+
+        backendStatus.textContent =
+          "اتصال به بک‌اند مخیار موفق بود ✅";
+
+        console.log("Backend response:", data);
+
       } catch (error) {
-        console.error(error);
-        setStatus("ورود Firebase انجام شد، اما اتصال بک‌اند خطا داشت: " + error.message);
+
+        console.error("Backend connection error:", error);
+
+        backendStatus.textContent =
+          "خطا در اتصال به بک‌اند: " + error.message;
+
+      } finally {
+
+        connectingUid = null;
+
       }
+    }
+
+
+    // ==========================================
+    // 8. مدیریت وضعیت ورود کاربر
+    // ==========================================
+
+    async function initializeAuth() {
+
+      try {
+
+        // بررسی نتیجه بازگشت از صفحه گوگل
+        await getRedirectResult(auth);
+
+      } catch (error) {
+
+        console.error("Redirect result error:", error);
+
+        setStatus(
+          "خطا در بازگشت از گوگل: " + error.message
+        );
+
+      }
+
+      // فقط این قسمت وضعیت کاربر را مدیریت می‌کند.
+      // بنابراین درخواست اتصال تکراری ارسال نمی‌شود.
+
+      onAuthStateChanged(auth, async (user) => {
+
+        if (user) {
+
+          loginBtn.style.display = "none";
+          logoutBtn.style.display = "block";
+          userInfo.style.display = "block";
+
+          userName.textContent =
+            "نام: " + (user.displayName || "بدون نام");
+
+          userEmail.textContent =
+            "ایمیل: " + (user.email || "بدون ایمیل");
+
+          setStatus("ورود به Firebase موفق بود ✅");
+
+          await connectToBackend(user);
+
+        } else {
+
+          connectedUid = null;
+          connectingUid = null;
+
+          loginBtn.style.display = "block";
+          loginBtn.disabled = false;
+
+          logoutBtn.style.display = "none";
+          userInfo.style.display = "none";
+
+          setStatus("برای استفاده از مخیار وارد حساب خود شو.");
+
+        }
+
+      });
+
+    }
+
+
+    // ==========================================
+    // 9. خروج از حساب
+    // ==========================================
+
+    logoutBtn.addEventListener("click", async () => {
+
+      try {
+
+        logoutBtn.disabled = true;
+
+        await signOut(auth);
+
+        setStatus("با موفقیت از حساب خارج شدی.");
+
+      } catch (error) {
+
+        console.error("Logout error:", error);
+
+        setStatus("خطا در خروج: " + error.message);
+
+      } finally {
+
+        logoutBtn.disabled = false;
+
+      }
+
     });
 
-    setPersistence(auth, browserLocalPersistence).catch(console.error);
+
+    // ==========================================
+    // 10. شروع برنامه
+    // ==========================================
+
+    initializeAuth();
+
   </script>
+
 </body>
 </html>
