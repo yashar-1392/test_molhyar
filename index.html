@@ -1,69 +1,60 @@
+
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <title>ورود با گوگل - مخیار</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>تست بک‌اند مخیار</title>
 </head>
-<body>
+<body style="font-family:Tahoma;text-align:center;margin-top:80px">
 
-    <div style="text-align: center; margin-top: 100px; font-family: Tahoma;">
-        <!-- دکمه ورود با گوگل -->
-        <button id="loginBtn" style="padding: 12px 24px; font-size: 16px; cursor: pointer;">ورود با حساب گوگل</button>
+  <h2>تست اتصال بک‌اند مخیار</h2>
 
-        <!-- اطلاعات کاربر بعد از ورود -->
-        <div id="userInfo" style="display: none;">
-            <p>سلام، <span id="userName"></span> عزیز، خوش آمدید!</p>
-            <button id="logoutBtn" style="padding: 8px 16px; cursor: pointer;">خروج از حساب</button>
-        </div>
-    </div>
+  <button id="testBtn">تست اتصال به Cloudflare</button>
+  <button id="sendBtn">ارسال اطلاعات آزمایشی</button>
 
-    <!-- اسکریپت اتصال به فایربیس و مدیریت ورود -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  <pre id="result" style="direction:ltr;text-align:left;margin:30px auto;max-width:600px;white-space:pre-wrap"></pre>
 
-        // کلیدهای پروژه شما از فایربیس
-        const firebaseConfig = {
-            apiKey: "AIzaSyD_b3We39OOnxGa-Jw1KAtZS7Q7jT7-ClU",
-            authDomain: "mokhyar-ai.firebaseapp.com",
-            projectId: "mokhyar-ai",
-            storageBucket: "mokhyar-ai.firebasestorage.app",
-            messagingSenderId: "490899120010",
-            appId: "1:490899120010:web:391b49a94875c43ebbb273",
-            measurementId: "G-Q94PN0CMT8"
-        };
+  <script>
+    const WORKER_URL = "https://YOUR-WORKER.workers.dev";
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const provider = new GoogleAuthProvider();
+    const result = document.getElementById("result");
 
-        // رویداد کلیک برای دکمه ورود
-        document.getElementById('loginBtn').addEventListener('click', () => {
-            signInWithPopup(auth, provider)
-                .then((result) => {
-                    console.log("ورود موفق:", result.user.displayName);
-                })
-                .catch((error) => {
-                    console.error("خطا در ورود:", error.message);
-                });
+    async function request(path, options = {}) {
+      result.textContent = "در حال اتصال...";
+
+      try {
+        const response = await fetch(WORKER_URL + path, {
+          ...options,
+          headers: {
+            "Content-Type": "application/json",
+            ...options.headers
+          }
         });
 
-        // رویداد کلیک برای دکمه خروج
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            signOut(auth);
-        });
+        const data = await response.json();
 
-        // بررسی وضعیت ورود کاربر به صورت زنده
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                document.getElementById('userInfo').style.display = 'block';
-                document.getElementById('loginBtn').style.display = 'none';
-                document.getElementById('userName').innerText = user.displayName;
-            } else {
-                document.getElementById('userInfo').style.display = 'none';
-                document.getElementById('loginBtn').style.display = 'block';
-            }
-        });
-    </script>
+        result.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        result.textContent = "خطا در اتصال: " + error.message;
+      }
+    }
+
+    document.getElementById("testBtn").onclick = () => {
+      request("/api/test");
+    };
+
+    document.getElementById("sendBtn").onclick = () => {
+      request("/api/echo", {
+        method: "POST",
+        body: JSON.stringify({
+          name: "Mokhyar",
+          action: "backend_test",
+          message: "سلام از فرانت‌اند مخیار!"
+        })
+      });
+    };
+  </script>
+
 </body>
 </html>
