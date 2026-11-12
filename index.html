@@ -3,58 +3,191 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>تست بک‌اند مخیار</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ورود به مخیار</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #f4f6fb;
+      font-family: Tahoma, sans-serif;
+    }
+    .card {
+      width: min(360px, calc(100% - 40px));
+      padding: 32px 24px;
+      background: white;
+      border-radius: 18px;
+      box-shadow: 0 8px 35px #00000012;
+      text-align: center;
+    }
+    button {
+      width: 100%;
+      padding: 13px;
+      margin-top: 14px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      background: white;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .5; cursor: wait; }
+    #userInfo { display: none; }
+    #status {
+      margin-top: 18px;
+      font-size: 13px;
+      line-height: 1.8;
+      color: #555;
+      overflow-wrap: anywhere;
+    }
+    #userPhoto {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+  </style>
 </head>
-<body style="font-family:Tahoma;text-align:center;margin-top:80px">
+<body>
 
-  <h2>تست اتصال بک‌اند مخیار</h2>
+  <main class="card">
+    <h2>ورود به مخیار 🤖</h2>
+    <p>برای استفاده از حساب کاربری خود وارد شوید.</p>
 
-  <button id="testBtn">تست اتصال به Cloudflare</button>
-  <button id="sendBtn">ارسال اطلاعات آزمایشی</button>
+    <button id="loginBtn">🌐 ورود با حساب گوگل</button>
 
-  <pre id="result" style="direction:ltr;text-align:left;margin:30px auto;max-width:600px;white-space:pre-wrap"></pre>
+    <section id="userInfo">
+      <img id="userPhoto" alt="تصویر پروفایل">
+      <h3 id="userName"></h3>
+      <p id="userEmail"></p>
+      <button id="logoutBtn">خروج از حساب</button>
+    </section>
 
-  <script>
-    const WORKER_URL = "https://YOUR-WORKER.workers.dev";
+    <div id="status">آماده ورود</div>
+  </main>
 
-    const result = document.getElementById("result");
+  <script type="module">
+    import { initializeApp } from
+      "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 
-    async function request(path, options = {}) {
-      result.textContent = "در حال اتصال...";
+    import {
+      getAuth,
+      GoogleAuthProvider,
+      signInWithPopup,
+      signOut,
+      onAuthStateChanged,
+      setPersistence,
+      browserLocalPersistence
+    } from
+      "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-      try {
-        const response = await fetch(WORKER_URL + path, {
-          ...options,
-          headers: {
-            "Content-Type": "application/json",
-            ...options.headers
-          }
-        });
+    const firebaseConfig = {
+      apiKey: "AIzaSyD_b3We39OOnxGa-Jw1KAtZS7Q7jT7-ClU",
+      authDomain: "mokhyar-ai.firebaseapp.com",
+      projectId: "mokhyar-ai",
+      storageBucket: "mokhyar-ai.firebasestorage.app",
+      messagingSenderId: "490899120010",
+      appId: "1:490899120010:web:391b49a94875c43ebbb273",
+      measurementId: "G-Q94PN0CMT8"
+    };
 
-        const data = await response.json();
+    const WORKER_URL =
+      "https://mokhyar-backend.yashar-online-store.workers.dev";
 
-        result.textContent = JSON.stringify(data, null, 2);
-      } catch (error) {
-        result.textContent = "خطا در اتصال: " + error.message;
-      }
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    const provider = new GoogleAuthProvider();
+    provider.addScope("email");
+    provider.setCustomParameters({
+      prompt: "select_account"
+    });
+
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const userInfo = document.getElementById("userInfo");
+    const statusBox = document.getElementById("status");
+
+    function setStatus(message) {
+      statusBox.textContent = message;
     }
 
-    document.getElementById("testBtn").onclick = () => {
-      request("/api/test");
-    };
+    async function connectToBackend(user) {
+      setStatus("در حال اتصال حساب به بک‌اند مخیار...");
 
-    document.getElementById("sendBtn").onclick = () => {
-      request("/api/echo", {
+      const idToken = await user.getIdToken();
+
+      const response = await fetch(`${WORKER_URL}/auth/google`, {
         method: "POST",
-        body: JSON.stringify({
-          name: "Mokhyar",
-          action: "backend_test",
-          message: "سلام از فرانت‌اند مخیار!"
-        })
+        headers: {
+          "Authorization": `Bearer ${idToken}`,
+          "Content-Type": "application/json"
+        }
       });
-    };
-  </script>
 
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "اتصال به بک‌اند ناموفق بود.");
+      }
+
+      setStatus("ورود موفق بود و حساب به بک‌اند مخیار متصل شد.");
+      return data;
+    }
+
+    loginBtn.addEventListener("click", async () => {
+      loginBtn.disabled = true;
+      setStatus("در حال باز کردن ورود گوگل...");
+
+      try {
+        const result = await signInWithPopup(auth, provider);
+        await connectToBackend(result.user);
+      } catch (error) {
+        console.error(error);
+        setStatus("خطا: " + (error.message || "ورود ناموفق بود."));
+      } finally {
+        loginBtn.disabled = false;
+      }
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      try {
+        await signOut(auth);
+        setStatus("از حساب خارج شدید.");
+      } catch (error) {
+        setStatus("خطا در خروج: " + error.message);
+      }
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        loginBtn.style.display = "block";
+        userInfo.style.display = "none";
+        return;
+      }
+
+      loginBtn.style.display = "none";
+      userInfo.style.display = "block";
+
+      document.getElementById("userName").textContent =
+        user.displayName || "کاربر مخیار";
+
+      document.getElementById("userEmail").textContent =
+        user.email || "";
+
+      document.getElementById("userPhoto").src =
+        user.photoURL || "";
+
+      try {
+        await connectToBackend(user);
+      } catch (error) {
+        console.error(error);
+        setStatus("ورود Firebase انجام شد، اما اتصال بک‌اند خطا داشت: " + error.message);
+      }
+    });
+
+    setPersistence(auth, browserLocalPersistence).catch(console.error);
+  </script>
 </body>
 </html>
