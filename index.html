@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>ورود با گوگل - مخیار</title>
+</head>
+<body>
+
+    <div style="text-align: center; margin-top: 100px; font-family: Tahoma;">
+        <!-- دکمه ورود با گوگل -->
+        <button id="loginBtn" style="padding: 12px 24px; font-size: 16px; cursor: pointer;">ورود با حساب گوگل</button>
+
+        <!-- اطلاعات کاربر بعد از ورود -->
+        <div id="userInfo" style="display: none;">
+            <p>سلام، <span id="userName"></span> عزیز، خوش آمدید!</p>
+            <button id="logoutBtn" style="padding: 8px 16px; cursor: pointer;">خروج از حساب</button>
+        </div>
+    </div>
+
+    <!-- اسکریپت اتصال به فایربیس و مدیریت ورود -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        // کلیدهای پروژه شما از فایربیس
+        const firebaseConfig = {
+            apiKey: "AIzaSyD_b3We39OOnxGa-Jw1KAtZS7Q7jT7-ClU",
+            authDomain: "mokhyar-ai.firebaseapp.com",
+            projectId: "mokhyar-ai",
+            storageBucket: "mokhyar-ai.firebasestorage.app",
+            messagingSenderId: "490899120010",
+            appId: "1:490899120010:web:391b49a94875c43ebbb273",
+            measurementId: "G-Q94PN0CMT8"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+
+        // رویداد کلیک برای دکمه ورود
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            signInWithPopup(auth, provider)
+                .then((result) => {
+                    console.log("ورود موفق:", result.user.displayName);
+                })
+                .catch((error) => {
+                    console.error("خطا در ورود:", error.message);
+                });
+        });
+
+        // رویداد کلیک برای دکمه خروج
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            signOut(auth);
+        });
+
+        // بررسی وضعیت ورود کاربر به صورت زنده
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('userInfo').style.display = 'block';
+                document.getElementById('loginBtn').style.display = 'none';
+                document.getElementById('userName').innerText = user.displayName;
+            } else {
+                document.getElementById('userInfo').style.display = 'none';
+                document.getElementById('loginBtn').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
